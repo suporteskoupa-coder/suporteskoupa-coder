@@ -19,6 +19,6 @@ Outros: [Teclado RGB via USB HID](https://github.com/suporteskoupa-coder/teclado
 
 ### Tecnologias
 
-**Linguagens:** Python, C++, Arduino, PowerShell, Java
-**Ferramentas:** Git, SQLite, Ollama, WebAssembly (Wasmtime), máquinas virtuais, ESP32 e sensores
-**Idiomas:** Português (nativo), Inglês (intermediário)
+- **Linguagens:** Python, C++, Arduino, PowerShell, Java
+- **Ferramentas:** Git, SQLite, Ollama, WebAssembly (Wasmtime), máquinas virtuais, ESP32 e sensores
+- **Idiomas:** Português (nativo), Inglês (intermediário)
