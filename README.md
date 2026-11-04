@@ -10,7 +10,7 @@ Construo projetos que unem hardware e software: **IoT, Python, C++ e IA rodando 
 
 ### Projetos em destaque
 
-- **[Monitoramento energético com IoT](https://github.com/suporteskoupa-coder/Monitoramento-energetico-Parte-2)**: Iniciação Científica na UVA. Medição de baixo custo do consumo de equipamentos elétricos com ESP32 e sensor SCT-013. Programei parte do firmware em C++. `C++` `Arduino` `ESP32` `Python`
+- **Monitoramento energético com IoT** (Iniciação Científica na UVA, código ainda não público): medição de baixo custo do consumo de equipamentos elétricos com ESP32 e sensor SCT-013. Programei parte do firmware em C++. `C++` `Arduino` `ESP32`
 - **[Laboratório de vida artificial](https://github.com/suporteskoupa-coder/laboratorio-vida-artificial)**: agentes com IA local que mantêm memória, crenças e relações, mais um motor evolutivo que gera código WebAssembly em sandbox. 120 testes automatizados. `Python` `Ollama` `WebAssembly`
 - **[Assistente de IA para Windows](https://github.com/suporteskoupa-coder/assistente-ia-windows)**: conversa, lembra informações e executa tarefas no PC, com IA na nuvem ou local. É a evolução do [NOLAN](https://github.com/suporteskoupa-coder/NOLAN), minha primeira versão, 100% offline. `Python` `SQLite` `LLMs`
 - **[ISO customizada do Windows](https://github.com/suporteskoupa-coder/windows-iso-customizada)**: Windows em português mais leve, com instalador próprio e geração automatizada testada em VMs. `C++` `PowerShell`
