@@ -19,6 +19,7 @@ class Config:
     thumb_options: int = 3
     dead_min_s: float = 4.0
     font_path: Path = Path("marca/fonte.ttf")
+    cinematic: bool = False  # cor + barras 2.39:1 + fades (vídeos de passeio)
 
     def resolve_font(self) -> Path:
         """Fonte da marca se existir; senão uma fonte do sistema."""

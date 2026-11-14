@@ -5,6 +5,8 @@ from pathlib import Path
 from .config import Config
 from .probe import MediaInfo
 
+LOUDNORM = "loudnorm=I=-14:TP=-1.5:LRA=11"  # nível de referência do YouTube
+
 TONEMAP = ("zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,"
            "tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p")
 
@@ -52,3 +54,17 @@ def normalize(src: Path, dst: Path, info: MediaInfo, cfg: Config) -> Path:
     cmd += video_args(pick_encoder(), h, cfg.fps) + [str(dst)]
     subprocess.run(cmd, check=True)
     return dst
+
+
+def cinematic_video(width: int, height: int, duration: float) -> str:
+    """Cor levemente mais rica, barras pretas 2.39:1 dentro do quadro e fades de 1 s."""
+    bar = max(0.0, (1 - (width / height) / 2.39) / 2)
+    out = max(0.0, duration - 1)
+    return (f"eq=contrast=1.08:saturation=1.12,"
+            f"drawbox=x=0:y=0:w=iw:h=ih*{bar:.4f}:color=black:t=fill,"
+            f"drawbox=x=0:y=ih*{1 - bar:.4f}:w=iw:h=ih*{bar:.4f}+2:color=black:t=fill,"
+            f"fade=t=in:st=0:d=1,fade=t=out:st={out:.3f}:d=1")
+
+
+def cinematic_audio(duration: float) -> str:
+    return f"afade=t=in:st=0:d=1,afade=t=out:st={max(0.0, duration - 1):.3f}:d=1"

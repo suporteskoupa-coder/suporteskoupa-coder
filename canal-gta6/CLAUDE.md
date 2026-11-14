@@ -19,5 +19,14 @@ Spec: veja `docs/superpowers/specs/2026-11-14-canal-gta6-design.md` no repo orig
 5. Diga ao dono o que está pronto e a ordem/horário de publicação sugeridos.
 6. Uma vez por semana: ler os CSVs em `metricas/` e propor ajustes de formato, títulos e cadência.
 
+## Opções
+- `--cinematic`: cor mais rica + barras 2.39:1 + fades de 1 s. Use em passeios/ambientes, não em missões.
+- `--duracao-short N`: duração dos Shorts (padrão 30 s, máx. 59).
+- Áudio é sempre normalizado para -14 LUFS (padrão do YouTube).
+
+## Status
+- Tarefas 1–7 do plano prontas. Falta a Tarefa 8: ensaio com gravação real (o dono tem 2 vídeos de Battlefield 6 — servem de ensaio).
+- Pendências a medir no ensaio: tempo do detect_scenes em 1 h de 4K; limite de linha de comando com muitos cortes; vídeo 100% parado quebra render_long.
+
 ## Calibração
 (valores ajustados após o ensaio com gravação real do PS5 entram aqui)

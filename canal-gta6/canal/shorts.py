@@ -4,7 +4,7 @@ from pathlib import Path
 
 from .analyze import Peak
 from .config import Config
-from .encode import pick_encoder, video_args
+from .encode import LOUDNORM, pick_encoder, video_args
 from .probe import probe
 
 
@@ -52,7 +52,7 @@ def render_short(src: Path, window: tuple[float, float], dst: Path, cfg: Config,
     cmd = ["ffmpeg", "-y", "-v", "error", "-ss", f"{start}", "-t", f"{dur}", "-i", str(src),
            "-filter_complex", graph, "-map", "[outv]"]
     if probe(src).has_audio:
-        cmd += ["-map", "0:a"]
+        cmd += ["-map", "0:a", "-af", LOUDNORM]
     cmd += video_args(pick_encoder(), h, cfg.fps) + [str(dst)]
     try:
         subprocess.run(cmd, check=True)

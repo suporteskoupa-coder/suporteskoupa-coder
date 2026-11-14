@@ -2,7 +2,8 @@ import subprocess
 from pathlib import Path
 
 from .config import Config
-from .encode import pick_encoder, target_height, video_args
+from .encode import (LOUDNORM, cinematic_audio, cinematic_video, pick_encoder,
+                     target_height, video_args)
 from .probe import probe
 
 Seg = tuple[float, float]
@@ -51,10 +52,18 @@ def render_long(src: Path, segments: list[Seg], dst: Path, cfg: Config) -> Path:
     h = target_height(info, cfg)
     a = 1 if info.has_audio else 0
     graph = ";".join(parts) + f";{''.join(labels)}concat=n={len(segments)}:v=1:a={a}[cv]" + ("[ca]" if a else "")
-    graph += f";[cv]scale=-2:{h},fps={cfg.fps}[outv]"
+    total = sum(e - s for s, e in segments)
+    vchain = f"scale=-2:{h},fps={cfg.fps}"
+    achain = LOUDNORM
+    if cfg.cinematic:
+        vchain += "," + cinematic_video(info.width, info.height, total)
+        achain += "," + cinematic_audio(total)
+    graph += f";[cv]{vchain}[outv]"
+    if a:
+        graph += f";[ca]{achain}[outa]"
     cmd = ["ffmpeg", "-y", "-v", "error", "-i", str(src), "-filter_complex", graph, "-map", "[outv]"]
     if a:
-        cmd += ["-map", "[ca]"]
+        cmd += ["-map", "[outa]"]
     cmd += video_args(pick_encoder(), h, cfg.fps) + [str(dst)]
     subprocess.run(cmd, check=True)
     return dst

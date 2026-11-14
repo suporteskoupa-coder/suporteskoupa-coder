@@ -119,6 +119,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--notas", default="")
     p.add_argument("--saida", type=Path, default=Path("saida"))
     p.add_argument("--duracao-short", type=float, default=30.0)
+    p.add_argument("--cinematic", action="store_true",
+                   help="cor + barras de cinema + fades (bom para passeios)")
     s = sub.add_parser("short", help="gera um Short de um trecho específico")
     s.add_argument("arquivo", type=Path)
     s.add_argument("--inicio", type=float, required=True)
@@ -128,7 +130,8 @@ def main(argv: list[str] | None = None) -> int:
     a = ap.parse_args(argv)
     try:
         if a.cmd == "processar":
-            processar(a.arquivo, a.slug, a.notas, a.saida, short_len_s=a.duracao_short)
+            processar(a.arquivo, a.slug, a.notas, a.saida, cfg=Config(cinematic=a.cinematic),
+                      short_len_s=a.duracao_short)
         else:
             a.saida.parent.mkdir(parents=True, exist_ok=True)
             render_short(a.arquivo, (a.inicio, a.fim), a.saida, Config(), text=a.texto)
