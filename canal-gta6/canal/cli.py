@@ -51,15 +51,18 @@ class _Etapa:
 
 
 def processar(src: Path, slug: str, notas: str = "", out_root: Path = Path("saida"),
-              cfg: Config = Config(), short_len_s: float = 30.0) -> Path:
+              cfg: Config = Config(), short_len_s: float = 30.0, inicio: float = 0.0) -> Path:
+    """inicio: segundos da abertura que ficam fora de tudo (longo, Shorts e thumbs)."""
     src = Path(src)
     check_free_space(src, out_root)
     out = out_root / f"{date.today():%Y-%m-%d}-{slug}"
-    (out / "shorts").mkdir(parents=True, exist_ok=True)
     print(f"Encoder: {pick_encoder()}")
 
     with _Etapa("Lendo o arquivo"):
         info = probe(src)
+    if not 0 <= inicio < info.duration - 1:
+        raise ValueError(f"--inicio {inicio} fora do vídeo ({info.duration:.0f} s)")
+    (out / "shorts").mkdir(parents=True, exist_ok=True)
     trabalho, temp = src, None
     if info.is_hdr or info.is_vfr or round(info.fps) != cfg.fps:
         with _Etapa("Normalizando (HDR/fps)"):
@@ -70,23 +73,25 @@ def processar(src: Path, slug: str, notas: str = "", out_root: Path = Path("said
         with _Etapa("Analisando"):
             scenes, dead = scan(trabalho, cfg.dead_min_s)
             peaks = audio_peaks(trabalho)
-            segments = keep_segments(info.duration, dead)
+            fora = sorted(dead + ([(0.0, inicio)] if inicio > 0 else []))
+            segments = keep_segments(info.duration, fora)
             if not segments:
                 print("  aviso: o vídeo inteiro parece parado; nada foi cortado", flush=True)
-                segments = [(0.0, info.duration)]
+                segments = [(inicio, info.duration)]
             frames = sample_frames(trabalho, max(1.0, info.duration / 60), out / "frames")
         with _Etapa("Vídeo longo"):
             render_long(trabalho, segments, out / "video.mp4", cfg)
             caps = chapters(segments, scenes)
         with _Etapa("Shorts"):
             vivos = [p for p in peaks if any(s <= p.t < e for s, e in segments)]
-            janelas = pick_short_windows(vivos, info.duration, cfg.shorts_per_video, short_len_s)
+            janelas = pick_short_windows(vivos, info.duration, cfg.shorts_per_video, short_len_s,
+                                         min_start=inicio)
             shorts = [render_short(trabalho, w, out / "shorts" / f"{i:02d}.mp4", cfg)
                       for i, w in enumerate(janelas, 1)]
         with _Etapa("Thumbnails"):
             # frames de loading/menu têm muito texto e "parecem" nítidos: fora
             candidatos = [f for f in frames
-                          if not any(s <= _frame_t(f) < e for s, e in dead)] or frames
+                          if not any(s <= _frame_t(f) < e for s, e in fora)]                 or [f for f in frames if _frame_t(f) >= inicio] or frames
             escolhidos = best_frames(candidatos, cfg.thumb_options)
             if len(escolhidos) < cfg.thumb_options:
                 escolhidos = best_frames(candidatos, cfg.thumb_options, min_gap=1)
@@ -96,7 +101,7 @@ def processar(src: Path, slug: str, notas: str = "", out_root: Path = Path("said
         write_metadata(out / "metadata.md", slug=slug, notas=notas, chapters=caps,
                        shorts=rel(shorts), thumbs=rel(thumbs))
         analise = {
-            "fonte": str(src), "info": asdict(info), "scenes": scenes,
+            "fonte": str(src), "inicio": inicio, "info": asdict(info), "scenes": scenes,
             "peaks": [asdict(p) for p in peaks], "dead": dead, "segments": segments,
             "chapters": caps, "shorts": [{"arquivo": str(p.relative_to(out)), "janela": w}
                                          for p, w in zip(shorts, janelas)],
@@ -121,6 +126,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--notas", default="")
     p.add_argument("--saida", type=Path, default=Path("saida"))
     p.add_argument("--duracao-short", type=float, default=30.0)
+    p.add_argument("--inicio", type=float, default=0.0,
+                   help="descarta os primeiros N segundos (ex.: abertura com violência)")
     p.add_argument("--cinematic", action="store_true",
                    help="cor + barras de cinema + fades (bom para passeios)")
     s = sub.add_parser("short", help="gera um Short de um trecho específico")
@@ -133,11 +140,11 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if a.cmd == "processar":
             processar(a.arquivo, a.slug, a.notas, a.saida, cfg=Config(cinematic=a.cinematic),
-                      short_len_s=a.duracao_short)
+                      short_len_s=a.duracao_short, inicio=a.inicio)
         else:
             a.saida.parent.mkdir(parents=True, exist_ok=True)
             render_short(a.arquivo, (a.inicio, a.fim), a.saida, Config(), text=a.texto)
-    except EspacoInsuficiente as e:
+    except (EspacoInsuficiente, ValueError) as e:
         print(e, file=sys.stderr)
         return 2
     return 0

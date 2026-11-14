@@ -11,12 +11,13 @@ from .probe import probe
 
 
 def pick_short_windows(peaks: list[Peak], duration: float, n: int, length_s: float,
-                       lead_s: float = 3.0) -> list[tuple[float, float]]:
+                       lead_s: float = 3.0, min_start: float = 0.0) -> list[tuple[float, float]]:
+    """min_start: nenhuma janela começa antes disso (abertura descartada com --inicio)."""
     windows: list[tuple[float, float]] = []
-    if duration < length_s:
+    if duration - min_start < length_s:
         return windows
     for p in sorted(peaks, key=lambda p: p.rms_db, reverse=True):
-        start = max(0.0, p.t - lead_s)
+        start = max(min_start, p.t - lead_s)
         end = start + length_s
         if end > duration:
             end, start = duration, duration - length_s
