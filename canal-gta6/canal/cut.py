@@ -1,4 +1,5 @@
 import subprocess
+import tempfile
 from pathlib import Path
 
 from .config import Config
@@ -8,14 +9,19 @@ from .probe import probe
 
 Seg = tuple[float, float]
 
+# Acima disso o grafo vai para um arquivo (-/filter_complex, ffmpeg >= 7.1): o Windows limita
+# a linha de comando a 32767 caracteres (~230 cortes). Abaixo, fica na linha para funcionar
+# também com ffmpeg antigo.
+GRAPH_FILE_MIN_CHARS = 8000
 
-def keep_segments(duration: float, dead: list[Seg]) -> list[Seg]:
+
+def keep_segments(duration: float, dead: list[Seg], min_keep_s: float = 1.0) -> list[Seg]:
     keep, cur = [], 0
     for s, e in sorted(dead):
-        if s > cur:
+        if s - cur >= min_keep_s:
             keep.append((cur, s))
         cur = max(cur, e)
-    if cur < duration:
+    if duration - cur >= min_keep_s:
         keep.append((cur, duration))
     return keep
 
@@ -61,9 +67,21 @@ def render_long(src: Path, segments: list[Seg], dst: Path, cfg: Config) -> Path:
     graph += f";[cv]{vchain}[outv]"
     if a:
         graph += f";[ca]{achain}[outa]"
-    cmd = ["ffmpeg", "-y", "-v", "error", "-i", str(src), "-filter_complex", graph, "-map", "[outv]"]
+    graph_file = None
+    if len(graph) >= GRAPH_FILE_MIN_CHARS:
+        with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8") as f:
+            f.write(graph)
+        graph_file = Path(f.name)
+        graph_args = ["-/filter_complex", str(graph_file)]
+    else:
+        graph_args = ["-filter_complex", graph]
+    cmd = ["ffmpeg", "-y", "-v", "error", "-i", str(src), *graph_args, "-map", "[outv]"]
     if a:
         cmd += ["-map", "[outa]"]
     cmd += video_args(pick_encoder(), h, cfg.fps) + [str(dst)]
-    subprocess.run(cmd, check=True)
+    try:
+        subprocess.run(cmd, check=True)
+    finally:
+        if graph_file:
+            graph_file.unlink(missing_ok=True)
     return dst

@@ -28,7 +28,8 @@ def pick_encoder() -> str:
 
 def video_args(encoder: str, height: int, fps: int) -> list[str]:
     if encoder == "hevc_nvenc":
-        v = ["-c:v", "hevc_nvenc", "-preset", "p5", "-rc", "vbr", "-cq", "19",
+        # p4: no ensaio (4K60, RTX 3060) deu SSIM igual ao p5 (0,99063 x 0,99064) e 1,55x mais rápido
+        v = ["-c:v", "hevc_nvenc", "-preset", "p4", "-rc", "vbr", "-cq", "19",
              "-b:v", "0", "-tag:v", "hvc1"]
     else:
         v = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18"]

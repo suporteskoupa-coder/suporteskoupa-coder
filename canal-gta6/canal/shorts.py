@@ -2,6 +2,8 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from PIL import ImageFont
+
 from .analyze import Peak
 from .config import Config
 from .encode import LOUDNORM, pick_encoder, video_args
@@ -25,6 +27,31 @@ def pick_short_windows(peaks: list[Peak], duration: float, n: int, length_s: flo
     return windows
 
 
+def fit_text(text: str, font: Path, max_w: int, base: int = 72,
+             min_size: int = 44) -> tuple[list[str], int]:
+    """Texto que cabe em max_w: uma linha no maior tamanho possível; se ficar pequeno
+    demais, quebra em 2 linhas. (No ensaio, 40 caracteres em 72 px vazavam do quadro.)"""
+    def width(lines, size):
+        f = ImageFont.truetype(str(font), size)
+        return max(f.getlength(l) for l in lines)
+
+    def best(lines):
+        size = base
+        while size > min_size and width(lines, size) > max_w:
+            size -= 2
+        return size
+
+    one = [text]
+    if width(one, min_size) <= max_w and best(one) >= 56:
+        return one, best(one)
+    words = text.split()
+    if len(words) > 1:
+        splits = [[" ".join(words[:i]), " ".join(words[i:])] for i in range(1, len(words))]
+        two = min(splits, key=lambda ls: width(ls, base))
+        return two, best(two)
+    return one, best(one)
+
+
 def _filter_path(p: Path) -> str:
     """Caminho seguro dentro de um filtro do ffmpeg (Windows: C\\:/...)."""
     return p.resolve().as_posix().replace(":", r"\:").replace("'", r"\'")
@@ -35,18 +62,24 @@ def render_short(src: Path, window: tuple[float, float], dst: Path, cfg: Config,
     w, h = cfg.short_size
     start = window[0]
     dur = min(window[1] - window[0], cfg.short_max_s)
+    # fundo desfocado em 1/4 da resolução e ampliado: mesmo visual, 3,8x mais rápido (ensaio)
     graph = (f"[0:v]split[a][b];"
-             f"[a]scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h},boxblur=20[bg];"
+             f"[a]scale={w // 4}:{h // 4}:force_original_aspect_ratio=increase,crop={w // 4}:{h // 4},"
+             f"boxblur=5,scale={w}:{h}[bg];"
              f"[b]scale={w}:-2[fg];"
              f"[bg][fg]overlay=(W-w)/2:(H-h)/2,fps={cfg.fps}")
     tmp = None
     if text:
-        tmp = tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8")
-        tmp.write(text)
+        font = cfg.resolve_font()
+        lines, size = fit_text(text, font, max_w=int(w * 0.9) - 12)  # 12 = contorno dos 2 lados
+        tmp = tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8",
+                                          newline="\n")
+        tmp.write("\n".join(lines))
         tmp.close()
-        graph += (f",drawtext=fontfile='{_filter_path(cfg.resolve_font())}'"
+        graph += (f",drawtext=fontfile='{_filter_path(font)}'"
                   f":textfile='{_filter_path(Path(tmp.name))}':expansion=none"
-                  f":fontsize=72:fontcolor=white:borderw=6:bordercolor=black"
+                  f":fontsize={size}:fontcolor=white:borderw=6:bordercolor=black"
+                  f":text_align=center:line_spacing=12"
                   f":x=(w-text_w)/2:y=h*0.12")
     graph += "[outv]"
     cmd = ["ffmpeg", "-y", "-v", "error", "-ss", f"{start}", "-t", f"{dur}", "-i", str(src),

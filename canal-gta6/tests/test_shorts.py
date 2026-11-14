@@ -46,3 +46,35 @@ def test_render_short_with_accented_text(sample_video, tmp_path):
     out = render_short(sample_video(seconds=4), (0, 3), tmp_path / "s.mp4", Config(),
                        text="Ação na praia! 100% \"insano\": 'sério'")
     assert out.exists()
+
+
+def test_fit_text_shrinks_or_wraps_long_text():
+    from canal.shorts import fit_text
+    font = Config().resolve_font()
+    lines, size = fit_text("Sniper no topo da torre — visão incrível", font, max_w=972)
+    from PIL import ImageFont
+    f = ImageFont.truetype(str(font), size)
+    assert all(f.getlength(l) <= 972 for l in lines) and size >= 44 and len(lines) <= 2
+    assert fit_text("Curto", font, max_w=972) == (["Curto"], 72)
+
+
+def test_render_short_long_text_stays_inside_frame(sample_video, tmp_path):
+    import subprocess
+    import numpy as np
+    from PIL import Image
+    src = sample_video(seconds=6)
+    cfg = Config()
+
+    def faixa(out):
+        png = tmp_path / (out.stem + ".png")
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", "1", "-i", str(out), "-frames:v", "1",
+                        str(png)], check=True)
+        g = np.asarray(Image.open(png).convert("L"), dtype=np.float32)
+        return g[int(1920 * 0.08):int(1920 * 0.30)]  # faixa onde o texto mora
+
+    sem = faixa(render_short(src, (0, 3), tmp_path / "sem.mp4", cfg))
+    com = faixa(render_short(src, (0, 3), tmp_path / "com.mp4", cfg,
+                             text="Sniper no topo da torre — visão incrível"))
+    borda = 20
+    assert np.abs(com[:, :borda] - sem[:, :borda]).max() < 40      # nada de texto na borda esquerda
+    assert np.abs(com[:, -borda:] - sem[:, -borda:]).max() < 40    # nem na direita

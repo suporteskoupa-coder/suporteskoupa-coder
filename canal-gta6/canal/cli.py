@@ -7,7 +7,7 @@ from dataclasses import asdict
 from datetime import date
 from pathlib import Path
 
-from .analyze import audio_peaks, dead_segments, detect_scenes, sample_frames
+from .analyze import audio_peaks, sample_frames, scan
 from .config import Config
 from .cut import chapters, keep_segments, render_long
 from .encode import normalize, pick_encoder
@@ -68,10 +68,12 @@ def processar(src: Path, slug: str, notas: str = "", out_root: Path = Path("said
             info = probe(trabalho)
     try:
         with _Etapa("Analisando"):
-            scenes = detect_scenes(trabalho)
+            scenes, dead = scan(trabalho, cfg.dead_min_s)
             peaks = audio_peaks(trabalho)
-            dead = dead_segments(trabalho, cfg.dead_min_s)
             segments = keep_segments(info.duration, dead)
+            if not segments:
+                print("  aviso: o vídeo inteiro parece parado; nada foi cortado", flush=True)
+                segments = [(0.0, info.duration)]
             frames = sample_frames(trabalho, max(1.0, info.duration / 60), out / "frames")
         with _Etapa("Vídeo longo"):
             render_long(trabalho, segments, out / "video.mp4", cfg)

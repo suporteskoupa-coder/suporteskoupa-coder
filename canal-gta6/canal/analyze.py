@@ -16,13 +16,43 @@ class Peak:
     rms_db: float
 
 
-def detect_scenes(path: Path) -> list[tuple[float, float]]:
-    from scenedetect import ContentDetector, detect
+_SCENE = re.compile(r"lavfi\.scd\.time: ([\d.]+)")
+_FREEZE = re.compile(r"lavfi\.freezedetect\.freeze_(start|end): ([\d.]+)")
+SCAN_WIDTH = 480      # análise em baixa resolução: 4K decodifica uma vez só, filtros baratos
+SCENE_THRESHOLD = 10  # scdet (0-100); só alimenta os capítulos, precisão fina não importa
 
-    scenes = detect(str(path), ContentDetector())
-    if not scenes:
-        return [(0.0, probe(path).duration)]
-    return [(s.get_seconds(), e.get_seconds()) for s, e in scenes]
+
+def scan(path: Path, min_len_s: float) -> tuple[list[tuple[float, float]], list[tuple[float, float]]]:
+    """Uma passada do ffmpeg: cenas (scdet) e trechos parados (freezedetect).
+
+    Ensaio: em 4K60 o PySceneDetect levava 0,87x a duração (~52 min por 1 h);
+    scdet + freezedetect juntos ficam em ~0,25x.
+    """
+    err = subprocess.run(
+        ["ffmpeg", "-v", "info", "-i", str(path), "-an",
+         "-vf", f"scale={SCAN_WIDTH}:-2,freezedetect=n=-60dB:d={min_len_s},"
+                f"scdet=t={SCENE_THRESHOLD}",
+         "-f", "null", "-"],
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+    ).stderr
+    duration = probe(path).duration
+    cuts = sorted({float(t) for t in _SCENE.findall(err) if 0 < float(t) < duration})
+    bounds = [0.0, *cuts, duration]
+    scenes = list(zip(bounds, bounds[1:]))
+    dead, start = [], None
+    for kind, val in _FREEZE.findall(err):
+        if kind == "start":
+            start = float(val)
+        elif start is not None:
+            dead.append((start, float(val)))
+            start = None
+    if start is not None:
+        dead.append((start, duration))
+    return scenes, dead
+
+
+def detect_scenes(path: Path) -> list[tuple[float, float]]:
+    return scan(path, min_len_s=4.0)[0]
 
 
 def audio_peaks(path: Path, window_s: float = 1.0, top_n: int = 20,
@@ -52,26 +82,9 @@ def audio_peaks(path: Path, window_s: float = 1.0, top_n: int = 20,
     return chosen
 
 
-_FREEZE = re.compile(r"lavfi\.freezedetect\.freeze_(start|end): ([\d.]+)")
-
-
 def dead_segments(path: Path, min_len_s: float) -> list[tuple[float, float]]:
     """Trechos com imagem parada (loading, menus, pausa)."""
-    err = subprocess.run(
-        ["ffmpeg", "-v", "info", "-i", str(path), "-an",
-         "-vf", f"freezedetect=n=-60dB:d={min_len_s}", "-f", "null", "-"],
-        capture_output=True, text=True, encoding="utf-8", errors="replace",
-    ).stderr
-    segs, start = [], None
-    for kind, val in _FREEZE.findall(err):
-        if kind == "start":
-            start = float(val)
-        elif start is not None:
-            segs.append((start, float(val)))
-            start = None
-    if start is not None:
-        segs.append((start, probe(path).duration))
-    return segs
+    return scan(path, min_len_s)[1]
 
 
 def sample_frames(path: Path, every_s: float, out_dir: Path) -> list[Path]:
