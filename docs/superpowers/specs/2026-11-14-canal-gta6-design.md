@@ -33,10 +33,8 @@ Divisão do trabalho:
 ## 3. Restrições
 
 - **Hardware:** Windows, RTX 3060, 16 GB de RAM. Encode por GPU (NVENC h264/hevc). A 3060 **não** faz encode em AV1.
-- **Captura pelo console:**
-  - PS5: até 1 h por gravação. 4K60 só com gravação manual configurada em 4K (há relatos conflitantes).
-  - Xbox Series: modo "Iniciar gravação" até 1 h. Com HDR em 4K, o limite no armazenamento interno cai para cerca de 30 s.
-  - → **Gravar com HDR desligado** e conferir o limite na primeira sessão.
+- **Captura: PS5 (decidido).** Até 1 h por gravação. 4K60 só com gravação manual configurada em 4K (há relatos conflitantes). **Gravar com HDR desligado** e conferir o limite real na primeira sessão.
+- **Tempo do dono: 5 h por semana de jogo e gravação (decidido).** Dá cerca de 5 arquivos de 1 h por semana: material suficiente para 7 Shorts + 2 longos, desde que pelo menos 1 h seja de passeio contínuo.
 - **Volume de arquivos:** de 10 a 20 GB por hora de gravação. Exige SSD ou HD com folga (sugestão: pelo menos 500 GB livres).
 - **Política da Rockstar:** permite gameplay de fã, mas o texto fala em uso "não comercial" e ela pode derrubar vídeos caso a caso. Spoilers recebem tratamento mais duro.
 - **YouTube:** violência explícita nos primeiros ~7 s tira o anúncio. Thumbnail e título passam por revisão própria.
@@ -115,10 +113,11 @@ canal-gta6/
 
 **Dono:**
 - Sem comentários.
-- Grava pelo console.
+- Grava pelo PS5, 5 h por semana.
 - Edição no PC.
 - Ele mesmo publica.
 - Windows + RTX 3060 + 16 GB.
+- Design aprovado em 2026-11-14.
 
 **Claude (pode ser contestado):**
 - Edição por código em vez de clique em editor.
