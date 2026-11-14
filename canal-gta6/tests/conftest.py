@@ -15,6 +15,9 @@ def make_video(path: Path, *, seconds=20, width=1280, height=720, fps=30,
     if vfr:
         # primeiro segundo cheio, depois metade dos frames: timestamps irregulares
         vf.append("select='lt(t\\,1)+not(mod(n\\,2))'")
+    if hdr:
+        # ffmpeg 9 ignora -color_trc/-color_primaries de saída: marcar no próprio frame
+        vf.append("setparams=color_primaries=bt2020:color_trc=smpte2084:colorspace=bt2020nc")
     cmd = ["ffmpeg", "-y", "-v", "error",
            "-f", "lavfi", "-i", f"testsrc2=size={width}x{height}:rate={fps}:duration={seconds}"]
     if audio:
