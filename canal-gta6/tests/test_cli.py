@@ -53,3 +53,13 @@ def test_progress_output_survives_windows_codepage(capsys):
     with cli._Etapa("Análise do vídeo"):
         pass
     capsys.readouterr().out.encode("cp1252")
+
+
+def test_thumbs_skip_frozen_frames(sample_video, tmp_path):
+    out = processar(sample_video(seconds=40, freeze_at=(10, 30)), "loading",
+                    out_root=tmp_path / "saida", cfg=FAST, short_len_s=5)
+    data = json.loads((out / "analise.json").read_text(encoding="utf-8"))
+    (s, e), = data["dead"]
+    for f in data["thumbs_frames"]:
+        t = int(f.split("t")[-1].split(".")[0])
+        assert not (s <= t < e)

@@ -17,6 +17,10 @@ from .shorts import pick_short_windows, render_short
 from .thumbs import best_frames, make_thumb
 
 
+def _frame_t(f: Path) -> int:
+    return int(f.stem.lstrip("t"))
+
+
 class EspacoInsuficiente(RuntimeError):
     pass
 
@@ -78,9 +82,12 @@ def processar(src: Path, slug: str, notas: str = "", out_root: Path = Path("said
             shorts = [render_short(trabalho, w, out / "shorts" / f"{i:02d}.mp4", cfg)
                       for i, w in enumerate(janelas, 1)]
         with _Etapa("Thumbnails"):
-            escolhidos = best_frames(frames, cfg.thumb_options)
+            # frames de loading/menu têm muito texto e "parecem" nítidos: fora
+            candidatos = [f for f in frames
+                          if not any(s <= _frame_t(f) < e for s, e in dead)] or frames
+            escolhidos = best_frames(candidatos, cfg.thumb_options)
             if len(escolhidos) < cfg.thumb_options:
-                escolhidos = best_frames(frames, cfg.thumb_options, min_gap=1)
+                escolhidos = best_frames(candidatos, cfg.thumb_options, min_gap=1)
             thumbs = [make_thumb(f, out / "thumbs" / f"opcao-{i}.png", cfg)
                       for i, f in enumerate(escolhidos, 1)]
         rel = lambda ps: [p.relative_to(out) for p in ps]
@@ -92,6 +99,7 @@ def processar(src: Path, slug: str, notas: str = "", out_root: Path = Path("said
             "chapters": caps, "shorts": [{"arquivo": str(p.relative_to(out)), "janela": w}
                                          for p, w in zip(shorts, janelas)],
             "frames": [str(f.relative_to(out)) for f in frames],
+            "thumbs_frames": [str(f.relative_to(out)) for f in escolhidos],
         }
         (out / "analise.json").write_text(json.dumps(analise, ensure_ascii=False, indent=2),
                                           encoding="utf-8")
