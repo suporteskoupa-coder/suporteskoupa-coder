@@ -13,7 +13,8 @@ def make_video(path: Path, *, seconds=20, width=1280, height=720, fps=30,
         # congela usando o frame em s durante [s, e]
         vf.append(f"loop=loop={int((e - s) * fps)}:size=1:start={int(s * fps)},trim=duration={seconds}")
     if vfr:
-        vf.append("setpts='N/FRAME_RATE/TB+0.02*sin(N)/TB'")
+        # primeiro segundo cheio, depois metade dos frames: timestamps irregulares
+        vf.append("select='lt(t\\,1)+not(mod(n\\,2))'")
     cmd = ["ffmpeg", "-y", "-v", "error",
            "-f", "lavfi", "-i", f"testsrc2=size={width}x{height}:rate={fps}:duration={seconds}"]
     if audio:
