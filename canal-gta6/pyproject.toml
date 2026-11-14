@@ -1,0 +1,14 @@
+[project]
+name = "canal"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["scenedetect>=0.6", "opencv-python-headless", "numpy", "Pillow"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.setuptools]
+packages = ["canal"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
