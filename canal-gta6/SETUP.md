@@ -1,5 +1,6 @@
 # Instalação no Windows (uma vez só)
 
+0. **Atalho:** dentro da pasta `canal-gta6`, rode `powershell -ExecutionPolicy Bypass -File .\instalar.ps1` — ele faz os passos 1 e 2 sozinho.
 1. Abra o **PowerShell** e instale as ferramentas:
    ```powershell
    winget install Gyan.FFmpeg Python.Python.3.12 Git.Git
