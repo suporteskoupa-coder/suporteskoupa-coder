@@ -1,6 +1,8 @@
 """Pendências do ensaio: vídeo 100% parado, muitos cortes, detecção de cena por corte seco."""
 import subprocess
 
+import pytest
+
 from canal import cut
 from canal.analyze import detect_scenes
 from canal.cli import processar
@@ -46,7 +48,17 @@ def test_render_long_muitos_cortes_cabe_na_linha_de_comando(sample_video, tmp_pa
     assert "concat=n=500" in capturado.get("grafo", "")
 
 
+def _ffmpeg_aceita_opcao_de_arquivo(tmp_path) -> bool:
+    g = tmp_path / "g.txt"
+    g.write_text("[0:v]null[o]", encoding="utf-8")
+    return subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "testsrc2=d=0.1",
+                           "-/filter_complex", str(g), "-map", "[o]", "-f", "null", "-"],
+                          capture_output=True).returncode == 0
+
+
 def test_render_long_grafo_em_arquivo_funciona_de_verdade(sample_video, tmp_path, monkeypatch):
+    if not _ffmpeg_aceita_opcao_de_arquivo(tmp_path):
+        pytest.skip("ffmpeg antigo: -/filter_complex exige ffmpeg >= 7.1")
     monkeypatch.setattr(cut, "GRAPH_FILE_MIN_CHARS", 0)  # força o caminho do arquivo
     src = sample_video(seconds=10)
     out = render_long(src, [(0, 3), (5, 10)], tmp_path / "l.mp4", Config())

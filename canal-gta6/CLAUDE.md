@@ -76,7 +76,7 @@ O PS5 pode gravar diferente (4K, VFR, HDR): conferir no teste do console.
 
 **Revisão de conteúdo (o que o código NÃO resolve: checar à mão a cada vídeo):**
 - Picos de áudio caem em tiro, explosão e morte. Com `lead_s=3` o Short começa 3 s antes da violência.
-  - No ensaio, o Short que começava em 0 s do BF6 #2 abria com corpo e sangue, e o vídeo longo também. Troquei esse Short com `canal short`.
+  - No ensaio, o Short que começava em 0 s do BF6 #2 abria com corpo e sangue, e o vídeo longo também. Troquei esse Short pelo trecho 8–38 s com `canal short`. Começar em 4 s ainda mostrava respingo de sangue.
   - **Regra:** olhar os primeiros 7 s de todo Short e do longo. Se tiver violência, trocar o trecho.
   - Para o vídeo longo **não existe opção de cortar o início**: fazer à mão ou adicionar um `--inicio` ao `processar`.
 - Tela de morte e killcam animadas (cinza, com texto) **não são pegas pelo `freezedetect`**: o `dead` saiu vazio nos 3 arquivos.
@@ -88,6 +88,14 @@ O PS5 pode gravar diferente (4K, VFR, HDR): conferir no teste do console.
 - Loudness medida: longo de -14,5 a -14,9 LUFS, Shorts -14,4 a -14,5 (alvo -14, loudnorm de 1 passada). OK.
 - Saída: hevc/hvc1, 60 fps CFR, 1920x1080 / 1080x1920. Conferido com ffprobe.
 - Capítulos: com `min_gap_s=60`, um vídeo de 1:20 sai com 2 capítulos. O YouTube exige 3+, então em vídeo curto apague a seção.
+
+**Riscos abertos (conferir na 1ª gravação do PS5 e no 1º passeio):**
+- O `freezedetect` agora roda em 480 px. A redução tira ruído, então um trecho **quase** parado (passeio ou paisagem calma) pode ser cortado como "morto".
+  - Os testes só cobrem frame 100% congelado.
+  - Compare o `dead` do `analise.json` com os frames. Se cortar paisagem, suba `dead_min_s` ou o limiar `n=`.
+- "CUDA decode não ajuda" foi medido só com H.264. Se o 4K do PS5 vier em HEVC, medir de novo.
+- `canal short` não atualiza o `analise.json` nem o `metadata.md`: depois de trocar um Short, corrija a lista à mão.
+- O grafo em arquivo (`-/filter_complex`) exige ffmpeg ≥ 7.1. O winget instala o 9.x. Num ffmpeg antigo o teste é pulado, e só vídeos com mais de ~50 cortes falhariam.
 
 **Ambiente Windows:**
 - O winget instala o ffmpeg sem atalho no PATH da sessão já aberta.

@@ -68,19 +68,20 @@ def render_short(src: Path, window: tuple[float, float], dst: Path, cfg: Config,
              f"boxblur=5,scale={w}:{h}[bg];"
              f"[b]scale={w}:-2[fg];"
              f"[bg][fg]overlay=(W-w)/2:(H-h)/2,fps={cfg.fps}")
-    tmp = None
+    tmps: list[Path] = []
     if text:
         font = cfg.resolve_font()
         lines, size = fit_text(text, font, max_w=int(w * 0.9) - 12)  # 12 = contorno dos 2 lados
-        tmp = tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8",
-                                          newline="\n")
-        tmp.write("\n".join(lines))
-        tmp.close()
-        graph += (f",drawtext=fontfile='{_filter_path(font)}'"
-                  f":textfile='{_filter_path(Path(tmp.name))}':expansion=none"
-                  f":fontsize={size}:fontcolor=white:borderw=6:bordercolor=black"
-                  f":text_align=center:line_spacing=12"
-                  f":x=(w-text_w)/2:y=h*0.12")
+        # um drawtext por linha, centralizada: não depende de text_align (ffmpeg recente)
+        for i, line in enumerate(lines):
+            with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False,
+                                             encoding="utf-8") as tmp:
+                tmp.write(line)
+            tmps.append(Path(tmp.name))
+            graph += (f",drawtext=fontfile='{_filter_path(font)}'"
+                      f":textfile='{_filter_path(tmps[-1])}':expansion=none"
+                      f":fontsize={size}:fontcolor=white:borderw=6:bordercolor=black"
+                      f":x=(w-text_w)/2:y=h*0.12+{i * int(size * 1.25)}")
     graph += "[outv]"
     cmd = ["ffmpeg", "-y", "-v", "error", "-ss", f"{start}", "-t", f"{dur}", "-i", str(src),
            "-filter_complex", graph, "-map", "[outv]"]
@@ -90,6 +91,6 @@ def render_short(src: Path, window: tuple[float, float], dst: Path, cfg: Config,
     try:
         subprocess.run(cmd, check=True)
     finally:
-        if tmp:
-            Path(tmp.name).unlink(missing_ok=True)
+        for t in tmps:
+            t.unlink(missing_ok=True)
     return dst
